@@ -23,7 +23,7 @@
         
         @media (max-width: 768px) {
             input, textarea, select {
-                font-size: 16px !important; /* 자동 확대 방지 */
+                font-size: 16px !important;
             }
         }
     </style>
@@ -48,8 +48,8 @@
         };
 
         const App = () => {
-            const [view, setView] = useState('main'); // 'main', 'ai'
-            const [mobileTab, setMobileTab] = useState('recipes'); // 'recipes', 'fridge', 'ai'
+            const [view, setView] = useState('main'); 
+            const [mobileTab, setMobileTab] = useState('recipes'); 
             const [recipes, setRecipes] = useState([]);
             const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
             const [searchQuery, setSearchQuery] = useState("");
@@ -60,20 +60,18 @@
             const [editingId, setEditingId] = useState(null);
             const [isLoading, setIsLoading] = useState(true);
 
-            // 냉장고 & 장보기 상태
             const [fridgeData, setFridgeData] = useState({ refrigerated: "", frozen: "", roomTemp: "", sauce: "", shoppingMemo: "" });
             const [isFridgeSaving, setIsFridgeSaving] = useState(false);
             const [editingSection, setEditingSection] = useState(null);
             const [showShoppingDeleteConfirm, setShowShoppingDeleteConfirm] = useState(false);
             const [moveTarget, setMoveTarget] = useState(null);
+            const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
-            // AI 추천 상태
             const [aiInput, setAiInput] = useState("");
             const [aiRecommendations, setAiRecommendations] = useState([]); 
             const [selectedAiRecipe, setSelectedAiRecipe] = useState(null); 
             const [isAiLoading, setIsAiLoading] = useState(false);
             const [errorMsg, setErrorMsg] = useState("");
-            const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
             const [formData, setFormData] = useState({ title: "", category: "", ingredients: "", sauce: "", steps: "" });
             const [newCatName, setNewCatName] = useState("");
@@ -289,7 +287,7 @@
                                 <h1 className="text-xl font-black text-slate-900 tracking-tight">레시피 노트</h1>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* PC 전용: 설정 왼쪽 레시피 추천 버튼 */}
+                                {/* PC 전용: 설정 버튼 왼쪽으로 추천 버튼 이동 */}
                                 <button 
                                     onClick={() => setView('ai')} 
                                     className="hidden lg:flex p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all active:scale-90 items-center gap-1 text-xs font-bold"
@@ -302,33 +300,28 @@
                     </header>
 
                     <main className="max-w-[1400px] mx-auto px-4 py-6 w-full flex-grow flex flex-col lg:flex-row gap-6">
-                        {/* 레시피 카드 영역 (모바일 recipes 탭) */}
                         <div className={`flex-grow order-1 lg:order-1 ${mobileTab !== 'recipes' ? 'hidden lg:block' : ''}`}>
                             {view === 'main' ? (
                                 <>
-                                    {/* 검색바: [추가] + [검색] + [추천] 한 줄 배열 */}
-                                    <div className="flex gap-2 mb-6 items-center w-full overflow-hidden">
-                                        <button 
-                                            onClick={handleOpenAdd} 
-                                            className="bg-orange-500 text-white rounded-xl shadow-md active:scale-95 transition-all h-[42px] w-[42px] shrink-0 flex items-center justify-center"
-                                        >
-                                            <Icon name="plus" className="w-6 h-6" />
-                                        </button>
-                                        <div className="relative flex-grow">
+                                    {/* 검색바 레이아웃: [검색창] + [+] 한 줄 배열 (PC/모바일 추천 버튼은 중복 제거) */}
+                                    <div className="flex gap-2 mb-6 items-center w-full">
+                                        <div className="relative flex-grow h-[42px]">
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center"><Icon name="search" className="text-slate-400 w-4 h-4" /></div>
                                             <input 
                                                 type="text" 
                                                 placeholder="제목이나 재료 검색..." 
-                                                className="w-full pl-10 pr-4 bg-white rounded-xl border border-slate-200 outline-none text-sm shadow-sm focus:ring-2 focus:ring-orange-200 transition-all h-[42px]" 
+                                                className="w-full pl-10 pr-4 bg-white rounded-xl border border-slate-200 outline-none text-sm shadow-sm focus:ring-2 focus:ring-orange-200 transition-all h-full" 
                                                 value={searchQuery} 
                                                 onChange={(e) => setSearchQuery(e.target.value)} 
                                             />
                                         </div>
+                                        {/* 추가 버튼을 검색창 우측으로 배치 */}
                                         <button 
-                                            onClick={() => setView('ai')} 
-                                            className="bg-slate-900 text-white px-3 rounded-xl text-xs font-bold shadow-lg active:scale-95 transition-all h-[42px] flex items-center gap-2 shrink-0"
+                                            onClick={handleOpenAdd} 
+                                            className="bg-orange-500 text-white rounded-xl shadow-md active:scale-95 transition-all h-[42px] w-[42px] shrink-0 flex items-center justify-center"
+                                            title="레시피 추가"
                                         >
-                                            <Icon name="sparkles" className="w-3.5 h-3.5 text-orange-400" /> <span className="hidden sm:inline">레시피 추천</span><span className="sm:hidden">추천</span>
+                                            <Icon name="plus" className="w-6 h-6" />
                                         </button>
                                     </div>
 
@@ -376,7 +369,7 @@
                                         <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-xl animate-in fade-in">
                                             <div className="mb-8"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-3 uppercase tracking-tighter">필요 재료</h4><div className="flex flex-wrap gap-2">{selectedAiRecipe.ingredients.map((ing, i) => <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs rounded-xl font-medium">{ing}</span>)}</div></div>
                                             <div className="mb-8"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-3 uppercase tracking-tighter">소스 및 양념</h4><div className="flex flex-wrap gap-2">{selectedAiRecipe.sauce.map((s, i) => <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs rounded-xl font-medium">{s}</span>)}</div></div>
-                                            <div className="space-y-4">{selectedAiRecipe.steps.map((s, i) => (<div key={i} className="flex gap-4 items-center"><span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-[11px] font-black shadow-sm">{i+1}</span><p className="text-slate-600 text-sm leading-relaxed font-medium">{s}</p></div>))}</div>
+                                            <div className="space-y-4">{selectedAiRecipe.steps.map((s, i) => (<div key={i} className="flex gap-4 items-center"><span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-[11px] font-black shadow-sm transition-transform">{i+1}</span><p className="text-slate-600 text-sm leading-relaxed font-medium">{s}</p></div>))}</div>
                                             <div className="mt-10 pt-6 border-t flex justify-end"><button onClick={() => { const newRec = { id: Date.now(), title: selectedAiRecipe.title, category: categories[0] || "기타 한식", ingredients: selectedAiRecipe.ingredients, sauce: selectedAiRecipe.sauce, steps: selectedAiRecipe.steps }; setRecipes([...recipes, newRec]); saveData([...recipes, newRec], categories); setView('main'); setSelectedAiRecipe(null); }} className="bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Icon name="save" className="w-4 h-4" /> 이 레시피 저장하기</button></div>
                                         </div>
                                     )}
@@ -384,10 +377,9 @@
                             )}
                         </div>
 
-                        {/* 사이드바: 모바일 fridge 탭에서는 냉장고와 장보기가 위아래로 표시됨 */}
                         <aside className={`w-full lg:w-72 flex-shrink-0 order-2 lg:order-2 ${mobileTab === 'fridge' ? 'block' : 'hidden lg:block'}`}>
                             <div className="space-y-6">
-                                {/* 냉장고 */}
+                                {/* 냉장고 카드 */}
                                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
                                     <div className="bg-slate-50 px-4 h-[46px] border-b border-slate-100 flex justify-between items-center shrink-0">
                                         <h2 className="font-black text-slate-900 text-sm flex items-center gap-1.5"><Icon name="container" className="text-orange-500 w-4 h-4" /> 냉장고</h2>
@@ -396,7 +388,6 @@
                                         {['refrigerated', 'frozen', 'roomTemp', 'sauce'].map((key) => {
                                             const labels = { refrigerated: '냉장', frozen: '냉동', roomTemp: '실온', sauce: '소스 및 조미료' };
                                             const colors = { refrigerated: 'bg-orange-50 border-orange-100 text-orange-700', frozen: 'bg-blue-50 border-blue-100 text-blue-700', roomTemp: 'bg-amber-50 border-amber-100 text-amber-700', sauce: 'bg-emerald-50 border-emerald-100 text-emerald-700' };
-                                            // '냉장' 글씨 주황색으로 변경 (text-orange-500)
                                             const labelColors = { refrigerated: 'text-orange-500', frozen: 'text-blue-500', roomTemp: 'text-amber-500', sauce: 'text-emerald-500' };
                                             
                                             return (
@@ -422,7 +413,7 @@
                                     </div>
                                 </div>
 
-                                {/* 장보기 */}
+                                {/* 장보기 카드 */}
                                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden relative">
                                     <div className="bg-slate-50 px-4 h-[46px] border-b border-slate-100 flex justify-between items-center">
                                         <h2 className="font-black text-slate-900 text-sm flex items-center gap-1.5"><Icon name="shopping-cart" className="text-blue-500 w-4 h-4" /> 장보기</h2>
@@ -466,7 +457,6 @@
                                             />
                                         ) : (
                                             <div onClick={() => setEditingSection('shoppingMemo')} className="min-h-[60px] cursor-pointer hover:bg-slate-50 transition-all rounded-md group relative">
-                                                {/* 장보기 칩 배경색 수정: bg-slate-100 (연한 회색) */}
                                                 {renderChips(fridgeData.shoppingMemo, "bg-slate-100 border-slate-200 text-slate-600", 'shoppingMemo')}
                                                 {!fridgeData.shoppingMemo && (
                                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -481,7 +471,7 @@
                         </aside>
                     </main>
 
-                    {/* 모바일 내비게이션 독바 (레시피 / 냉장고·장보기 / 추천) */}
+                    {/* 모바일 내비게이션 독바 */}
                     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 lg:hidden shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                         <button 
                             onClick={() => {setMobileTab('recipes'); setView('main');}}
@@ -543,21 +533,21 @@
                         </div>
                     )}
 
-                    {/* 레시피 추가/수정 모달: 여백 및 버튼 크기 조정하여 카드 크기 축소 */}
+                    {/* 레시피 추가/수정 모달: 전체 사이즈 및 여백 축소 */}
                     {isFormOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
-                            <div className="bg-white w-full max-w-md rounded-[2rem] p-5 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
-                                <h2 className="text-[18px] lg:text-[20px] font-black mb-4 text-slate-900 tracking-tight">{editingId ? "레시피 수정" : "새 레시피 추가"}</h2>
-                                <form onSubmit={handleSubmit} className="space-y-3 text-sm font-medium">
-                                    <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">요리 제목</label><input required className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 focus:bg-white transition-all shadow-inner h-[42px]" placeholder="요리 제목" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
-                                    <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">카테고리</label><div className="relative"><select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 appearance-none shadow-inner h-[42px]" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required><option value="" disabled>카테고리 선택</option>{categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select><div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><Icon name="chevron-down" className="w-4 h-4" /></div></div></div>
+                            <div className="bg-white w-full max-w-md rounded-[1.5rem] p-4 sm:p-5 shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
+                                <h2 className="text-[18px] font-black mb-4 text-slate-900 tracking-tight">{editingId ? "레시피 수정" : "새 레시피 추가"}</h2>
+                                <form onSubmit={handleSubmit} className="space-y-2.5 text-sm font-medium">
+                                    <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">요리 제목</label><input required className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 focus:bg-white transition-all shadow-inner h-[38px]" placeholder="요리 제목" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
+                                    <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">카테고리</label><div className="relative"><select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 appearance-none shadow-inner h-[38px]" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required><option value="" disabled>카테고리 선택</option>{categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select><div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><Icon name="chevron-down" className="w-4 h-4" /></div></div></div>
                                     <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1 text-slate-700">주재료</label><textarea rows="2" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none shadow-inner" placeholder="주재료" value={formData.ingredients} onChange={e => setFormData({...formData, ingredients: e.target.value})} /></div>
                                     <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1 text-slate-700">소스 및 양념</label><textarea rows="2" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none shadow-inner" placeholder="소스 및 양념" value={formData.sauce} onChange={e => setFormData({...formData, sauce: e.target.value})} /></div>
                                     <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">조리 순서</label><textarea rows="3" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none shadow-inner" placeholder="조리 순서" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} /></div>
                                     
-                                    <div className="flex gap-2 pt-2">
-                                        <button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 py-2 text-slate-400 font-bold active:scale-95 transition-all text-xs border border-slate-100 rounded-xl">취소</button>
-                                        <button type="submit" className="flex-[2] bg-orange-500 text-white px-8 py-2 rounded-xl font-black shadow-lg hover:bg-orange-600 transition-all active:scale-95 text-xs">저장하기</button>
+                                    <div className="flex gap-2 pt-1.5">
+                                        <button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 h-[38px] text-slate-400 font-bold active:scale-95 transition-all text-xs border border-slate-100 rounded-xl">취소</button>
+                                        <button type="submit" className="flex-[2] h-[38px] bg-orange-500 text-white px-8 rounded-xl font-black shadow-lg hover:bg-orange-600 transition-all active:scale-95 text-xs">저장하기</button>
                                     </div>
                                 </form>
                             </div>
