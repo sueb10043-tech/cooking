@@ -149,7 +149,7 @@
                 setAiRecommendations([]);
                 setSelectedAiRecipe(null);
                 setErrorMsg("");
-                const prompt = `가진 재료: ${aiInput}. 3가지 요리를 JSON 형식으로 추천해줘. [{"title": "이름", "ingredients": ["재료"], "sauce": ["양념"], "steps": ["단계"]}]`;
+                const prompt = `가진 재료: ${aiInput}. 3가지 요리를 JSON 형식으로 추천해줘. JSON 코드 블록으로만 응답해. [{"title": "이름", "ingredients": ["재료"], "sauce": ["양념"], "steps": ["단계"]}]`;
                 try {
                     const response = await fetch(SCRIPT_URL, {
                         method: 'POST',
@@ -248,7 +248,7 @@
                 <div className="min-h-screen flex flex-col">
                     <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
                         <div className="max-w-[1400px] mx-auto px-4 py-3 flex justify-between items-center w-full">
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('main')}>
+                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => {setView('main'); setMoveTarget(null); setEditingSection(null);}}>
                                 <Icon name="utensils" className="text-orange-500 w-6 h-6" />
                                 <h1 className="text-xl font-black text-slate-900 hidden sm:block tracking-tight">나만의 레시피 노트</h1>
                             </div>
@@ -259,8 +259,9 @@
                         </div>
                     </header>
 
+                    {/* 메인 레이아웃: 모바일(flex-col)에서 레시피 카드 영역이 상단(order-1), 사이드바가 하단(order-2) */}
                     <main className="max-w-[1400px] mx-auto px-4 py-6 w-full flex-grow flex flex-col lg:flex-row gap-6">
-                        <div className="flex-grow order-2 lg:order-1">
+                        <div className="flex-grow order-1 lg:order-1">
                             {view === 'main' ? (
                                 <>
                                     <div className="flex gap-3 mb-6 items-center">
@@ -294,17 +295,28 @@
                                     <div className="flex items-center gap-4"><button onClick={() => { if(selectedAiRecipe) setSelectedAiRecipe(null); else setView('main'); }} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><Icon name="arrow-left" className="text-slate-600 w-6 h-6" /></button><h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedAiRecipe ? selectedAiRecipe.title : "AI 레시피 제안"}</h2></div>
                                     {!selectedAiRecipe ? (
                                         <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-                                            <div className="flex justify-between items-center mb-3"><p className="text-sm font-bold text-slate-500">가진 재료로 어떤 요리를 할까요?</p><button onClick={loadFridgeToAi} className="text-[11px] font-black text-orange-500 bg-orange-50 px-3 py-1.5 rounded-full hover:bg-orange-100 flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"><Icon name="container" className="w-3 h-3" /> 내 냉장고 재료 불러오기</button></div>
-                                            <div className="flex flex-col sm:flex-row gap-4">
-                                                <textarea className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm outline-none resize-none h-32 focus:border-orange-400 transition-all shadow-inner" placeholder="재료를 입력하거나 불러오세요." value={aiInput} onChange={(e) => setAiInput(e.target.value)} />
-                                                <button onClick={askAiRecipe} disabled={isAiLoading || !aiInput.trim()} className="bg-orange-500 text-white sm:w-28 rounded-2xl flex flex-col items-center justify-center p-5 shadow-lg active:scale-95 transition-all">{isAiLoading ? <div className="spinner border-white/30 border-t-white !w-8 !h-8"></div> : <Icon name="sparkles" className="w-8 h-8" />}<span className="text-xs font-bold mt-2">레시피 추천</span></button>
+                                            {/* '가진 재료로 어떤 요리를 할까요?' -> '어떤 레시피를 추천할까요?'로 수정 */}
+                                            <div className="flex justify-between items-center mb-3">
+                                                <p className="text-sm font-bold text-slate-500">어떤 레시피를 추천할까요?</p>
+                                                {/* 모바일에서 '냉장고'로 텍스트 축소 */}
+                                                <button onClick={loadFridgeToAi} className="text-[11px] font-black text-orange-500 bg-orange-50 px-3 py-1.5 rounded-full hover:bg-orange-100 flex items-center gap-1.5 shadow-sm active:scale-95 transition-all">
+                                                    <Icon name="container" className="w-3 h-3" /> <span className="hidden sm:inline">내 냉장고 재료 불러오기</span><span className="sm:hidden">냉장고</span>
+                                                </button>
+                                            </div>
+                                            {/* 입력창과 추천 버튼을 한 줄로 배열 및 세로 길이 축소 */}
+                                            <div className="flex gap-3">
+                                                <textarea className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none resize-none h-[64px] focus:border-orange-400 transition-all shadow-inner leading-snug" placeholder="재료를 입력하거나 불러오세요." value={aiInput} onChange={(e) => setAiInput(e.target.value)} />
+                                                <button onClick={askAiRecipe} disabled={isAiLoading || !aiInput.trim()} className="bg-orange-500 text-white w-20 sm:w-28 rounded-2xl flex flex-col items-center justify-center p-2 shadow-lg active:scale-95 transition-all">
+                                                    {isAiLoading ? <div className="spinner border-white/30 border-t-white !w-6 !h-6"></div> : <Icon name="sparkles" className="w-6 h-6" />}
+                                                    <span className="text-[10px] font-bold mt-1">추천</span>
+                                                </button>
                                             </div>
                                             <div className="grid grid-cols-1 gap-4 mt-6">{aiRecommendations.map((rec, idx) => (<div key={idx} onClick={() => setSelectedAiRecipe(rec)} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-orange-500 cursor-pointer flex justify-between items-center group transition-all"><div><h4 className="text-xl font-black text-slate-800 group-hover:text-orange-600 transition-colors">{rec.title}</h4><p className="text-sm text-slate-400 mt-1">{rec.ingredients.slice(0,3).join(', ')} 등</p></div><Icon name="chevron-right" className="text-slate-300 group-hover:text-orange-500 transition-transform group-hover:translate-x-1" /></div>))}</div>
                                         </div>
                                     ) : (
                                         <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-xl animate-in fade-in">
-                                            <div className="mb-8"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-3 uppercase">필요 재료</h4><div className="flex flex-wrap gap-2">{selectedAiRecipe.ingredients.map((ing, i) => <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs rounded-xl font-medium">{ing}</span>)}</div></div>
-                                            <div className="mb-8"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-3 uppercase">소스 및 양념</h4><div className="flex flex-wrap gap-2">{selectedAiRecipe.sauce.map((s, i) => <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs rounded-xl font-medium">{s}</span>)}</div></div>
+                                            <div className="mb-8"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-3 uppercase tracking-tighter">필요 재료</h4><div className="flex flex-wrap gap-2">{selectedAiRecipe.ingredients.map((ing, i) => <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs rounded-xl font-medium">{ing}</span>)}</div></div>
+                                            <div className="mb-8"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-3 uppercase tracking-tighter">소스 및 양념</h4><div className="flex flex-wrap gap-2">{selectedAiRecipe.sauce.map((s, i) => <span key={i} className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs rounded-xl font-medium">{s}</span>)}</div></div>
                                             <div className="space-y-4">{selectedAiRecipe.steps.map((s, i) => (<div key={i} className="flex gap-4 items-center"><span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-[11px] font-black shadow-sm">{i+1}</span><p className="text-slate-600 text-sm leading-relaxed font-medium">{s}</p></div>))}</div>
                                             <div className="mt-10 pt-6 border-t flex justify-end"><button onClick={() => { const newRec = { id: Date.now(), title: selectedAiRecipe.title, category: categories[0] || "기타 한식", ingredients: selectedAiRecipe.ingredients, sauce: selectedAiRecipe.sauce, steps: selectedAiRecipe.steps }; setRecipes([...recipes, newRec]); saveData([...recipes, newRec], categories); setView('main'); setSelectedAiRecipe(null); }} className="bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg active:scale-95"><Icon name="save" className="w-4 h-4" /> 이 레시피 저장하기</button></div>
                                         </div>
@@ -313,23 +325,23 @@
                             )}
                         </div>
 
-                        {/* 사이드바 영역: 헤더 높이 46px로 통일 */}
-                        <aside className="w-full lg:w-72 flex-shrink-0 space-y-6 order-1 lg:order-2">
+                        {/* 사이드바 영역: 모바일에서는 하단에 위치(order-2)하며 두 카드가 한 줄에 표시(grid-cols-2) */}
+                        <aside className="w-full lg:w-72 flex-shrink-0 grid grid-cols-2 lg:grid-cols-1 gap-4 order-2 lg:order-2">
                             {/* 내 냉장고 */}
-                            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                                <div className="bg-slate-50 px-4 h-[46px] border-b border-slate-100 flex justify-between items-center">
-                                    <h2 className="font-black text-slate-900 text-sm flex items-center gap-1.5"><Icon name="container" className="text-orange-500 w-4 h-4" /> 내 냉장고</h2>
-                                    <button onClick={() => {setEditingSection(null); saveFridgeAndMemo();}} disabled={isFridgeSaving} className="text-[10px] font-bold bg-orange-500 text-white px-2.5 py-1 rounded-md active:scale-95 transition-all shadow-sm">전체저장</button>
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
+                                <div className="bg-slate-50 px-3 sm:px-4 h-[46px] border-b border-slate-100 flex justify-between items-center shrink-0">
+                                    <h2 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-1.5"><Icon name="container" className="text-orange-500 w-4 h-4" /> <span className="hidden sm:inline">내 </span>냉장고</h2>
+                                    <button onClick={() => {setEditingSection(null); saveFridgeAndMemo();}} disabled={isFridgeSaving} className="text-[9px] sm:text-[10px] font-bold bg-orange-500 text-white px-2 py-1 rounded-md active:scale-95 transition-all shadow-sm">저장</button>
                                 </div>
-                                <div className="p-4 space-y-5">
+                                <div className="p-3 sm:p-4 space-y-4 sm:space-y-5 overflow-y-auto">
                                     {['refrigerated', 'frozen', 'roomTemp', 'sauce'].map((key) => {
-                                        const labels = { refrigerated: '냉장', frozen: '냉동', roomTemp: '실온', sauce: '소스 및 조미료' };
+                                        const labels = { refrigerated: '냉장', frozen: '냉동', roomTemp: '실온', sauce: '소스' };
                                         const colors = { refrigerated: 'bg-orange-50 border-orange-100 text-orange-700', frozen: 'bg-blue-50 border-blue-100 text-blue-700', roomTemp: 'bg-amber-50 border-amber-100 text-amber-700', sauce: 'bg-emerald-50 border-emerald-100 text-emerald-700' };
                                         const labelColors = { refrigerated: 'text-slate-400', frozen: 'text-blue-500', roomTemp: 'text-amber-500', sauce: 'text-emerald-500' };
                                         
                                         return (
                                             <div key={key}>
-                                                <label className={`text-[10px] font-black uppercase mb-1 block ${labelColors[key]}`}>{labels[key]}</label>
+                                                <label className={`text-[9px] font-black uppercase mb-1 block ${labelColors[key]}`}>{labels[key]}</label>
                                                 {editingSection === key ? (
                                                     <textarea 
                                                         autoFocus 
@@ -340,7 +352,7 @@
                                                         onBlur={() => setEditingSection(null)} 
                                                     />
                                                 ) : (
-                                                    <div onClick={() => setEditingSection(key)} className="min-h-[30px] cursor-pointer hover:bg-slate-50 transition-all rounded-md">
+                                                    <div onClick={() => setEditingSection(key)} className="min-h-[26px] cursor-pointer hover:bg-slate-50 transition-all rounded-md">
                                                         {renderChips(fridgeData[key], colors[key], key)}
                                                     </div>
                                                 )}
@@ -351,33 +363,32 @@
                             </div>
 
                             {/* 장보기 메모 */}
-                            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden relative">
-                                <div className="bg-slate-50 px-4 h-[46px] border-b border-slate-100 flex justify-between items-center">
-                                    <h2 className="font-black text-slate-900 text-sm flex items-center gap-1.5"><Icon name="shopping-cart" className="text-blue-500 w-4 h-4" /> 장보기 메모</h2>
-                                    <button onClick={(e) => { e.stopPropagation(); setShowShoppingDeleteConfirm(true); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90" title="전체 삭제"><Icon name="trash-2" className="w-4 h-4" /></button>
+                            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full relative">
+                                <div className="bg-slate-50 px-3 sm:px-4 h-[46px] border-b border-slate-100 flex justify-between items-center shrink-0">
+                                    <h2 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-1.5"><Icon name="shopping-cart" className="text-blue-500 w-4 h-4" /> 장보기</h2>
+                                    <button onClick={(e) => { e.stopPropagation(); setShowShoppingDeleteConfirm(true); }} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90" title="전체 삭제"><Icon name="trash-2" className="w-3.5 h-3.5" /></button>
                                 </div>
-                                <div className="p-4 relative min-h-[120px]">
+                                <div className="p-3 sm:p-4 relative flex-grow min-h-[120px]">
                                     {showShoppingDeleteConfirm && (
                                         <div className="absolute inset-0 z-30 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95">
-                                            <p className="text-[11px] font-bold text-slate-800 mb-3 text-center">장보기 메모를<br/>전부 삭제할까요?</p>
-                                            <div className="flex gap-2 w-full max-w-[160px]">
-                                                <button onClick={() => setShowShoppingDeleteConfirm(false)} className="flex-1 py-1.5 text-[10px] font-bold text-slate-400 bg-slate-100 rounded-lg">취소</button>
-                                                <button onClick={clearShoppingMemo} className="flex-[2] py-1.5 text-[10px] font-bold text-white bg-red-500 rounded-lg shadow-md">삭제</button>
+                                            <p className="text-[10px] font-bold text-slate-800 mb-3 text-center">전부 삭제할까요?</p>
+                                            <div className="flex gap-2 w-full">
+                                                <button onClick={() => setShowShoppingDeleteConfirm(false)} className="flex-1 py-1 text-[9px] font-bold text-slate-400 bg-slate-100 rounded-lg">취소</button>
+                                                <button onClick={clearShoppingMemo} className="flex-[1.5] py-1 text-[9px] font-bold text-white bg-red-500 rounded-lg shadow-sm">삭제</button>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* 이동 팝업: 레이아웃에 영향 주지 않도록 절대 위치 및 오버레이 적용 */}
                                     {moveTarget && (
                                         <>
-                                            {/* 외부 클릭 감지용 투명 오버레이 */}
+                                            {/* 외부 클릭 감지 오버레이 (클릭 시 팝업 닫힘) */}
                                             <div className="fixed inset-0 z-30" onClick={() => setMoveTarget(null)}></div>
-                                            <div className="absolute inset-x-4 top-3 z-40 bg-white border border-blue-200 rounded-lg shadow-2xl p-1.5 animate-in slide-in-from-top-2 flex items-center gap-1">
+                                            <div className="absolute inset-x-2 top-2 z-40 bg-white border border-blue-200 rounded-lg shadow-2xl p-1 animate-in slide-in-from-top-2 flex items-center gap-0.5">
                                                 <div className="flex-1 flex gap-0.5">
-                                                    <button onClick={() => moveItemToFridge('refrigerated')} className="flex-1 py-1.5 text-[8px] font-black bg-orange-50 text-orange-600 rounded hover:bg-orange-100 whitespace-nowrap leading-none transition-colors">냉장</button>
-                                                    <button onClick={() => moveItemToFridge('frozen')} className="flex-1 py-1.5 text-[8px] font-black bg-blue-50 text-blue-600 rounded hover:bg-blue-100 whitespace-nowrap leading-none transition-colors">냉동</button>
-                                                    <button onClick={() => moveItemToFridge('roomTemp')} className="flex-1 py-1.5 text-[8px] font-black bg-amber-50 text-amber-600 rounded hover:bg-amber-100 whitespace-nowrap leading-none transition-colors">실온</button>
-                                                    <button onClick={() => moveItemToFridge('sauce')} className="flex-1 py-1.5 text-[8px] font-black bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 whitespace-nowrap leading-none transition-colors">소스</button>
+                                                    <button onClick={() => moveItemToFridge('refrigerated')} className="flex-1 py-1.5 text-[8px] font-black bg-orange-50 text-orange-600 rounded whitespace-nowrap leading-none transition-colors">냉장</button>
+                                                    <button onClick={() => moveItemToFridge('frozen')} className="flex-1 py-1.5 text-[8px] font-black bg-blue-50 text-blue-600 rounded whitespace-nowrap leading-none transition-colors">냉동</button>
+                                                    <button onClick={() => moveItemToFridge('roomTemp')} className="flex-1 py-1.5 text-[8px] font-black bg-amber-50 text-amber-600 rounded whitespace-nowrap leading-none transition-colors">실온</button>
+                                                    <button onClick={() => moveItemToFridge('sauce')} className="flex-1 py-1.5 text-[8px] font-black bg-emerald-50 text-emerald-600 rounded whitespace-nowrap leading-none transition-colors">소스</button>
                                                 </div>
                                                 <button onClick={() => setMoveTarget(null)} className="p-0.5 text-slate-300 hover:text-slate-500 ml-0.5"><Icon name="x" className="w-3 h-3" /></button>
                                             </div>
@@ -387,19 +398,19 @@
                                     {editingSection === 'shoppingMemo' ? (
                                         <textarea 
                                             autoFocus 
-                                            className="w-full text-[12px] bg-white border border-blue-200 rounded-lg p-3 resize-none h-32 shadow-inner leading-relaxed"
+                                            className="w-full text-[12px] bg-white border border-blue-200 rounded-lg p-3 resize-none h-[150px] shadow-inner leading-relaxed"
                                             value={fridgeData.shoppingMemo}
                                             onChange={e => setFridgeData({...fridgeData, shoppingMemo: e.target.value})}
                                             onFocus={(e) => handleInputFocus(e, 'shoppingMemo')}
                                             onBlur={() => { setEditingSection(null); saveFridgeAndMemo(); }}
-                                            placeholder="구매할 재료를 적어주세요..."
+                                            placeholder="재료 적기..."
                                         />
                                     ) : (
                                         <div onClick={() => setEditingSection('shoppingMemo')} className="min-h-[60px] cursor-pointer hover:bg-slate-50 transition-all rounded-md group relative">
                                             {renderChips(fridgeData.shoppingMemo, "bg-blue-50 border-blue-100 text-blue-700", 'shoppingMemo')}
                                             {!fridgeData.shoppingMemo && (
                                                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                                    <span className="bg-white/90 px-2 py-1 rounded text-[10px] font-bold text-blue-500 shadow-sm border border-blue-100">클릭하여 편집</span>
+                                                    <span className="bg-white/90 px-2 py-1 rounded text-[10px] font-bold text-blue-500 shadow-sm border border-blue-100">편집</span>
                                                 </div>
                                             )}
                                         </div>
