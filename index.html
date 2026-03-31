@@ -21,6 +21,7 @@
         textarea:focus, input:focus, select:focus { outline: none; }
         .no-select { user-select: none; }
         
+        /* 모바일 입력창 자동 확대 방지 */
         @media (max-width: 768px) {
             input, textarea, select {
                 font-size: 16px !important;
@@ -60,6 +61,7 @@
             const [editingId, setEditingId] = useState(null);
             const [isLoading, setIsLoading] = useState(true);
 
+            // 냉장고 & 장보기 상태
             const [fridgeData, setFridgeData] = useState({ refrigerated: "", frozen: "", roomTemp: "", sauce: "", shoppingMemo: "" });
             const [isFridgeSaving, setIsFridgeSaving] = useState(false);
             const [editingSection, setEditingSection] = useState(null);
@@ -67,6 +69,7 @@
             const [moveTarget, setMoveTarget] = useState(null);
             const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
+            // AI 추천 상태
             const [aiInput, setAiInput] = useState("");
             const [aiRecommendations, setAiRecommendations] = useState([]); 
             const [selectedAiRecipe, setSelectedAiRecipe] = useState(null); 
@@ -155,7 +158,7 @@
                 setAiRecommendations([]);
                 setSelectedAiRecipe(null);
                 setErrorMsg("");
-                const prompt = `가진 재료: ${aiInput}. 3가지 요리를 JSON 형식으로 추천해줘. JSON 코드 블록으로만 응답해. [{"title": "이름", "ingredients": ["재료"], "sauce": ["양념"], "steps": ["단계"]}]`;
+                const prompt = `가진 재료: ${aiInput}. 3가지 요리를 JSON 형식으로 추천해줘. [{"title": "이름", "ingredients": ["재료"], "sauce": ["양념"], "steps": ["단계"]}]`;
                 try {
                     const response = await fetch(SCRIPT_URL, {
                         method: 'POST',
@@ -287,7 +290,7 @@
                                 <h1 className="text-xl font-black text-slate-900 tracking-tight">레시피 노트</h1>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* PC 전용: 설정 버튼 왼쪽으로 추천 버튼 이동 */}
+                                {/* PC 전용: 헤더 설정 버튼 왼쪽 추천 버튼 */}
                                 <button 
                                     onClick={() => setView('ai')} 
                                     className="hidden lg:flex p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all active:scale-90 items-center gap-1 text-xs font-bold"
@@ -303,7 +306,7 @@
                         <div className={`flex-grow order-1 lg:order-1 ${mobileTab !== 'recipes' ? 'hidden lg:block' : ''}`}>
                             {view === 'main' ? (
                                 <>
-                                    {/* 검색바 레이아웃: [검색창] + [+] 한 줄 배열 (PC/모바일 추천 버튼은 중복 제거) */}
+                                    {/* 검색 영역: [검색창] + [+] 한 줄 배열 */}
                                     <div className="flex gap-2 mb-6 items-center w-full">
                                         <div className="relative flex-grow h-[42px]">
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center"><Icon name="search" className="text-slate-400 w-4 h-4" /></div>
@@ -315,7 +318,7 @@
                                                 onChange={(e) => setSearchQuery(e.target.value)} 
                                             />
                                         </div>
-                                        {/* 추가 버튼을 검색창 우측으로 배치 */}
+                                        {/* 추가(+) 버튼을 검색창 우측으로 고정 */}
                                         <button 
                                             onClick={handleOpenAdd} 
                                             className="bg-orange-500 text-white rounded-xl shadow-md active:scale-95 transition-all h-[42px] w-[42px] shrink-0 flex items-center justify-center"
@@ -347,7 +350,9 @@
                                 </>
                             ) : (
                                 <div className="space-y-6 animate-in slide-in-from-bottom-4">
-                                    <div className="flex items-center gap-4"><button onClick={() => { if(selectedAiRecipe) setSelectedAiRecipe(null); else setView('main'); }} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><Icon name="arrow-left" className="text-slate-600 w-6 h-6" /></button><h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedAiRecipe ? selectedAiRecipe.title : "AI 레시피 제안"}</h2></div>
+                                    <div className="flex items-center gap-4">
+                                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedAiRecipe ? selectedAiRecipe.title : "AI 레시피 제안"}</h2>
+                                    </div>
                                     {!selectedAiRecipe ? (
                                         <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
                                             <div className="flex justify-between items-center mb-3">
@@ -357,8 +362,8 @@
                                                 </button>
                                             </div>
                                             <div className="flex gap-3">
-                                                <textarea className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none resize-none h-[64px] focus:border-orange-400 transition-all shadow-inner leading-snug" placeholder="재료를 입력하거나 불러오세요." value={aiInput} onChange={(e) => setAiInput(e.target.value)} />
-                                                <button onClick={askAiRecipe} disabled={isAiLoading || !aiInput.trim()} className="bg-orange-500 text-white w-20 sm:w-28 rounded-2xl flex flex-col items-center justify-center p-2 shadow-lg active:scale-95 transition-all h-[64px]">
+                                                <textarea className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none resize-none h-[69px] lg:h-[64px] focus:border-orange-400 transition-all shadow-inner leading-snug" placeholder="재료를 입력하거나 불러오세요." value={aiInput} onChange={(e) => setAiInput(e.target.value)} />
+                                                <button onClick={askAiRecipe} disabled={isAiLoading || !aiInput.trim()} className="bg-orange-500 text-white w-20 sm:w-28 rounded-2xl flex flex-col items-center justify-center p-2 shadow-lg active:scale-95 transition-all h-[69px] lg:h-[64px]">
                                                     {isAiLoading ? <div className="spinner border-white/30 border-t-white !w-8 !h-8"></div> : <Icon name="sparkles" className="w-6 h-6" />}
                                                     <span className="text-[10px] font-bold mt-1">추천</span>
                                                 </button>
@@ -379,20 +384,17 @@
 
                         <aside className={`w-full lg:w-72 flex-shrink-0 order-2 lg:order-2 ${mobileTab === 'fridge' ? 'block' : 'hidden lg:block'}`}>
                             <div className="space-y-6">
-                                {/* 냉장고 카드 */}
+                                {/* 냉장고 */}
                                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
                                     <div className="bg-slate-50 px-4 h-[46px] border-b border-slate-100 flex justify-between items-center shrink-0">
                                         <h2 className="font-black text-slate-900 text-sm flex items-center gap-1.5"><Icon name="container" className="text-orange-500 w-4 h-4" /> 냉장고</h2>
                                     </div>
                                     <div className="p-4 space-y-5">
                                         {['refrigerated', 'frozen', 'roomTemp', 'sauce'].map((key) => {
-                                            const labels = { refrigerated: '냉장', frozen: '냉동', roomTemp: '실온', sauce: '소스 및 조미료' };
-                                            const colors = { refrigerated: 'bg-orange-50 border-orange-100 text-orange-700', frozen: 'bg-blue-50 border-blue-100 text-blue-700', roomTemp: 'bg-amber-50 border-amber-100 text-amber-700', sauce: 'bg-emerald-50 border-emerald-100 text-emerald-700' };
                                             const labelColors = { refrigerated: 'text-orange-500', frozen: 'text-blue-500', roomTemp: 'text-amber-500', sauce: 'text-emerald-500' };
-                                            
                                             return (
                                                 <div key={key}>
-                                                    <label className={`text-[10px] font-black uppercase mb-1 block ${labelColors[key]}`}>{labels[key]}</label>
+                                                    <label className={`text-[10px] font-black uppercase mb-1 block ${labelColors[key]}`}>{key === 'refrigerated' ? '냉장' : key === 'frozen' ? '냉동' : key === 'roomTemp' ? '실온' : '소스 및 조미료'}</label>
                                                     {editingSection === key ? (
                                                         <textarea 
                                                             autoFocus 
@@ -404,7 +406,7 @@
                                                         />
                                                     ) : (
                                                         <div onClick={() => setEditingSection(key)} className="min-h-[30px] cursor-pointer hover:bg-slate-50 transition-all rounded-md">
-                                                            {renderChips(fridgeData[key], colors[key], key)}
+                                                            {renderChips(fridgeData[key], key === 'refrigerated' ? 'bg-orange-50 border-orange-100 text-orange-700' : key === 'frozen' ? 'bg-blue-50 border-blue-100 text-blue-700' : key === 'roomTemp' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-emerald-50 border-emerald-100 text-emerald-700', key)}
                                                         </div>
                                                     )}
                                                 </div>
@@ -413,7 +415,7 @@
                                     </div>
                                 </div>
 
-                                {/* 장보기 카드 */}
+                                {/* 장보기 */}
                                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden relative">
                                     <div className="bg-slate-50 px-4 h-[46px] border-b border-slate-100 flex justify-between items-center">
                                         <h2 className="font-black text-slate-900 text-sm flex items-center gap-1.5"><Icon name="shopping-cart" className="text-blue-500 w-4 h-4" /> 장보기</h2>
@@ -473,24 +475,15 @@
 
                     {/* 모바일 내비게이션 독바 */}
                     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 lg:hidden shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-                        <button 
-                            onClick={() => {setMobileTab('recipes'); setView('main');}}
-                            className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'recipes' && view === 'main' ? 'text-orange-500' : 'text-slate-400'}`}
-                        >
+                        <button onClick={() => {setMobileTab('recipes'); setView('main');}} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'recipes' && view === 'main' ? 'text-orange-500' : 'text-slate-400'}`}>
                             <Icon name="book-open" className="w-6 h-6" />
                             <span className="text-[10px] font-bold">레시피</span>
                         </button>
-                        <button 
-                            onClick={() => setMobileTab('fridge')}
-                            className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'fridge' ? 'text-orange-500' : 'text-slate-400'}`}
-                        >
+                        <button onClick={() => setMobileTab('fridge')} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'fridge' ? 'text-orange-500' : 'text-slate-400'}`}>
                             <Icon name="container" className="w-6 h-6" />
                             <span className="text-[10px] font-bold">냉장고/장보기</span>
                         </button>
-                        <button 
-                            onClick={() => {setMobileTab('recipes'); setView('ai');}}
-                            className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${view === 'ai' ? 'text-orange-500' : 'text-slate-400'}`}
-                        >
+                        <button onClick={() => {setMobileTab('recipes'); setView('ai');}} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${view === 'ai' ? 'text-orange-500' : 'text-slate-400'}`}>
                             <Icon name="sparkles" className="w-6 h-6" />
                             <span className="text-[10px] font-bold">추천</span>
                         </button>
@@ -533,7 +526,7 @@
                         </div>
                     )}
 
-                    {/* 레시피 추가/수정 모달: 전체 사이즈 및 여백 축소 */}
+                    {/* 추가/수정 모달 */}
                     {isFormOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
                             <div className="bg-white w-full max-w-md rounded-[1.5rem] p-4 sm:p-5 shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95">
@@ -543,7 +536,7 @@
                                     <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">카테고리</label><div className="relative"><select className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-orange-500 appearance-none shadow-inner h-[38px]" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required><option value="" disabled>카테고리 선택</option>{categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select><div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><Icon name="chevron-down" className="w-4 h-4" /></div></div></div>
                                     <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1 text-slate-700">주재료</label><textarea rows="2" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none shadow-inner" placeholder="주재료" value={formData.ingredients} onChange={e => setFormData({...formData, ingredients: e.target.value})} /></div>
                                     <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1 text-slate-700">소스 및 양념</label><textarea rows="2" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none shadow-inner" placeholder="소스 및 양념" value={formData.sauce} onChange={e => setFormData({...formData, sauce: e.target.value})} /></div>
-                                    <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">조리 순서</label><textarea rows="3" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none shadow-inner" placeholder="조리 순서" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} /></div>
+                                    <div><label className="block text-[10px] uppercase text-slate-400 font-black mb-1 ml-1">조리 순서</label><textarea className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none resize-none shadow-inner h-[105px]" placeholder="조리 순서" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} /></div>
                                     
                                     <div className="flex gap-2 pt-1.5">
                                         <button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 h-[38px] text-slate-400 font-bold active:scale-95 transition-all text-xs border border-slate-100 rounded-xl">취소</button>
