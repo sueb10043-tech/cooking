@@ -1,333 +1,397 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Utensils, Clock, BookOpen, X, Trash2, Edit2, Settings, Check, GripVertical, Sparkles, ArrowLeft, Send, Loader2 } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 레시피 노트</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel CDN (JSX 해석용) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .drag-over { border-color: #f97316 !important; border-style: dashed !important; opacity: 0.5; }
+        /* 스크롤바 숨기기 */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
 
-// 제공해주신 구글 앱스 스크립트 웹 앱 URL
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjIxQcDAcLHuH9auRs4bLN--l9KJ5PvFx6uVuYwguyll8fbKW7G5HUSsQvG8rYWAsA0A/exec"; 
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-const initialCategories = ["찌개&국", "기타 한식", "면", "소스", "디저트"];
+        // 제공해주신 구글 앱스 스크립트 웹 앱 URL
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjIxQcDAcLHuH9auRs4bLN--l9KJ5PvFx6uVuYwguyll8fbKW7G5HUSsQvG8rYWAsA0A/exec";
+        const initialCategories = ["찌개&국", "기타 한식", "면", "소스", "디저트"];
 
-const App = () => {
-  const [view, setView] = useState('main'); 
-  const [recipes, setRecipes] = useState([]);
-  const [categories, setCategories] = useState(initialCategories);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("전체");
-  const [selectedRecipe, setSelectedRecipe] = useState(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+        const App = () => {
+            const [view, setView] = useState('main'); 
+            const [recipes, setRecipes] = useState([]);
+            const [categories, setCategories] = useState(initialCategories);
+            const [searchQuery, setSearchQuery] = useState("");
+            const [activeCategory, setActiveCategory] = useState("전체");
+            const [selectedRecipe, setSelectedRecipe] = useState(null);
+            const [isFormOpen, setIsFormOpen] = useState(false);
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [editingId, setEditingId] = useState(null);
+            const [isLoading, setIsLoading] = useState(true);
 
-  // AI 관련 상태
-  const [aiInput, setAiInput] = useState("");
-  const [aiResultHtml, setAiResultHtml] = useState("");
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+            // AI 관련 상태
+            const [aiInput, setAiInput] = useState("");
+            const [aiResultHtml, setAiResultHtml] = useState("");
+            const [isAiLoading, setIsAiLoading] = useState(false);
+            const [errorMsg, setErrorMsg] = useState("");
+            const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
-  const [formData, setFormData] = useState({
-    title: "", category: "", time: "", ingredients: "", steps: ""
-  });
+            const [formData, setFormData] = useState({
+                title: "", category: "", time: "", ingredients: "", steps: ""
+            });
 
-  const [newCatName, setNewCatName] = useState("");
+            const [newCatName, setNewCatName] = useState("");
 
-  // 초기 데이터 로드
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(SCRIPT_URL);
-        const data = await response.json();
-        if (data.recipes) setRecipes(data.recipes);
-        if (data.categories) setCategories(data.categories);
-      } catch (err) {
-        console.error("Data load failed:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+            // 초기 데이터 로드
+            useEffect(() => {
+                fetchData();
+            }, []);
 
-  // 서버 저장 함수
-  const saveData = async (updatedRecipes, updatedCategories) => {
-    try {
-      await fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors", // GAS POST 보안 정책 대응
-        body: JSON.stringify({
-          type: "save",
-          recipes: updatedRecipes || recipes,
-          categories: updatedCategories || categories
-        })
-      });
-    } catch (err) {
-      console.error("Save failed:", err);
-    }
-  };
+            const fetchData = async () => {
+                try {
+                    const response = await fetch(SCRIPT_URL);
+                    const data = await response.json();
+                    if (data.recipes) setRecipes(data.recipes);
+                    if (data.categories) setCategories(data.categories);
+                } catch (err) {
+                    console.error("Data load failed:", err);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
 
-  // AI 응답 포맷팅 (제공된 로직 적용)
-  const formatAiResponse = (text) => {
-    if (!text) return "";
-    return text
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold text-orange-600 mt-4 mb-2 border-l-4 border-orange-500 pl-2">$1</h3>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900 font-bold">$1</strong>')
-      .replace(/\n\n/g, '</p><p class="mb-3">')
-      .replace(/\n/g, '<br>');
-  };
+            const saveData = async (updatedRecipes, updatedCategories) => {
+                try {
+                    await fetch(SCRIPT_URL, {
+                        method: "POST",
+                        mode: "no-cors",
+                        body: JSON.stringify({
+                            type: "save",
+                            recipes: updatedRecipes || recipes,
+                            categories: updatedCategories || categories
+                        })
+                    });
+                } catch (err) {
+                    console.error("Save failed:", err);
+                }
+            };
 
-  // AI 추천 요청
-  const askAiRecipe = async () => {
-    if (!aiInput.trim()) return;
-    setIsAiLoading(true);
-    setAiResultHtml("");
-    setErrorMsg("");
-    
-    const fetchWithRetry = async (retries = 0) => {
-      try {
-        const response = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            type: "analyze",
-            prompt: aiInput
-          })
-        });
+            const formatAiResponse = (text) => {
+                if (!text) return "";
+                return text
+                    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold text-orange-600 mt-4 mb-2 border-l-4 border-orange-500 pl-2">$1</h3>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900 font-bold">$1</strong>')
+                    .replace(/\n\n/g, '</p><p class="mb-3">')
+                    .replace(/\n/g, '<br>');
+            };
 
-        const result = await response.json();
-        if (result.error) throw new Error(result.error);
-        
-        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          setAiResultHtml(formatAiResponse(text));
-        } else {
-          throw new Error("AI 응답 데이터가 없습니다.");
-        }
-      } catch (err) {
-        if (retries < 3) {
-          await new Promise(res => setTimeout(res, 2000));
-          return fetchWithRetry(retries + 1);
-        }
-        setErrorMsg(`AI 요청 실패: ${err.message}`);
-      } finally {
-        setIsAiLoading(false);
-      }
-    };
+            const askAiRecipe = async () => {
+                if (!aiInput.trim()) return;
+                setIsAiLoading(true);
+                setAiResultHtml("");
+                setErrorMsg("");
+                
+                const fetchWithRetry = async (retries = 0) => {
+                    try {
+                        const response = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                type: "analyze",
+                                prompt: aiInput
+                            })
+                        });
 
-    await fetchWithRetry();
-  };
+                        const result = await response.json();
+                        if (result.error) throw new Error(result.error);
+                        
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) {
+                            setAiResultHtml(formatAiResponse(text));
+                        } else {
+                            throw new Error("AI 응답 데이터가 없습니다.");
+                        }
+                    } catch (err) {
+                        if (retries < 3) {
+                            await new Promise(res => setTimeout(res, 2000));
+                            return fetchWithRetry(retries + 1);
+                        }
+                        setErrorMsg(`AI 요청 실패: ${err.message}`);
+                    } finally {
+                        setIsAiLoading(false);
+                    }
+                };
 
-  const filteredRecipes = recipes.filter(recipe => {
-    const matchesCategory = activeCategory === "전체" || recipe.category === activeCategory;
-    const matchesSearch = 
-      recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.ingredients.some(ing => ing.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
+                await fetchWithRetry();
+            };
 
-  const handleOpenAdd = () => {
-    setEditingId(null);
-    setFormData({ title: "", category: categories[0] || "", time: "", ingredients: "", steps: "" });
-    setIsFormOpen(true);
-  };
+            const filteredRecipes = recipes.filter(recipe => {
+                const matchesCategory = activeCategory === "전체" || recipe.category === activeCategory;
+                const matchesSearch = 
+                    recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    recipe.ingredients.some(ing => ing.toLowerCase().includes(searchQuery.toLowerCase()));
+                return matchesCategory && matchesSearch;
+            });
 
-  const handleOpenEdit = (recipe, e) => {
-    if (e) e.stopPropagation();
-    setEditingId(recipe.id);
-    setFormData({
-      title: recipe.title, category: recipe.category, time: recipe.time,
-      ingredients: recipe.ingredients.join('\n'), steps: recipe.steps.join('\n')
-    });
-    setIsFormOpen(true);
-  };
+            const handleOpenAdd = () => {
+                setEditingId(null);
+                setFormData({ 
+                    title: "", 
+                    category: categories.length > 0 ? categories[0] : "", 
+                    time: "", 
+                    ingredients: "", 
+                    steps: "" 
+                });
+                setIsFormOpen(true);
+            };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const recipeData = {
-      id: editingId || Date.now(),
-      title: formData.title, category: formData.category, time: formData.time,
-      ingredients: formData.ingredients.split('\n').filter(i => i.trim()),
-      steps: formData.steps.split('\n').filter(s => s.trim())
-    };
-    const updatedRecipes = editingId ? recipes.map(r => r.id === editingId ? recipeData : r) : [...recipes, recipeData];
-    setRecipes(updatedRecipes);
-    saveData(updatedRecipes, categories);
-    setIsFormOpen(false);
-  };
+            const handleOpenEdit = (recipe, e) => {
+                if (e) e.stopPropagation();
+                setEditingId(recipe.id);
+                setFormData({
+                    title: recipe.title, 
+                    category: recipe.category, 
+                    time: recipe.time,
+                    ingredients: recipe.ingredients.join('\n'), 
+                    steps: recipe.steps.join('\n')
+                });
+                setIsFormOpen(true);
+            };
 
-  const deleteRecipe = (id, e) => {
-    e.stopPropagation();
-    const updatedRecipes = recipes.filter(r => r.id !== id);
-    setRecipes(updatedRecipes);
-    saveData(updatedRecipes, categories);
-    if (selectedRecipe?.id === id) setSelectedRecipe(null);
-  };
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const recipeData = {
+                    id: editingId || Date.now(),
+                    title: formData.title, 
+                    category: formData.category, 
+                    time: formData.time,
+                    ingredients: formData.ingredients.split('\n').filter(i => i.trim()),
+                    steps: formData.steps.split('\n').filter(s => s.trim())
+                };
+                const updatedRecipes = editingId ? recipes.map(r => r.id === editingId ? recipeData : r) : [...recipes, recipeData];
+                setRecipes(updatedRecipes);
+                saveData(updatedRecipes, categories);
+                setIsFormOpen(false);
+            };
 
-  const addCategory = () => {
-    if (newCatName && !categories.includes(newCatName)) {
-      const updatedCategories = [...categories, newCatName];
-      setCategories(updatedCategories);
-      saveData(recipes, updatedCategories);
-      setNewCatName("");
-    }
-  };
+            const deleteRecipe = (id, e) => {
+                e.stopPropagation();
+                const updatedRecipes = recipes.filter(r => r.id !== id);
+                setRecipes(updatedRecipes);
+                saveData(updatedRecipes, categories);
+                if (selectedRecipe?.id === id) setSelectedRecipe(null);
+            };
 
-  const deleteCategory = (cat) => {
-    const updatedCategories = categories.filter(c => c !== cat);
-    setCategories(updatedCategories);
-    saveData(recipes, updatedCategories);
-    if (activeCategory === cat) setActiveCategory("전체");
-  };
+            const addCategory = () => {
+                if (newCatName && !categories.includes(newCatName)) {
+                    const updatedCategories = [...categories, newCatName];
+                    setCategories(updatedCategories);
+                    saveData(recipes, updatedCategories);
+                    setNewCatName("");
+                }
+            };
 
-  const onDragStart = (index) => setDraggedItemIndex(index);
-  const onDragOver = (e) => e.preventDefault();
-  const onDrop = (index) => {
-    if (draggedItemIndex === null || draggedItemIndex === index) return;
-    const newCategories = [...categories];
-    const draggedItem = newCategories[draggedItemIndex];
-    newCategories.splice(draggedItemIndex, 1);
-    newCategories.splice(index, 0, draggedItem);
-    setCategories(newCategories);
-    saveData(recipes, newCategories);
-    setDraggedItemIndex(null);
-  };
+            const deleteCategory = (cat) => {
+                const updatedCategories = categories.filter(c => c !== cat);
+                setCategories(updatedCategories);
+                saveData(recipes, updatedCategories);
+                if (activeCategory === cat) setActiveCategory("전체");
+            };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-500 font-bold bg-slate-50">서버 연결 중...</div>;
+            const onDragStart = (index) => setDraggedItemIndex(index);
+            const onDragOver = (e) => e.preventDefault();
+            const onDrop = (index) => {
+                if (draggedItemIndex === null || draggedItemIndex === index) return;
+                const newCategories = [...categories];
+                const draggedItem = newCategories[draggedItemIndex];
+                newCategories.splice(draggedItemIndex, 1);
+                newCategories.splice(index, 0, draggedItem);
+                setCategories(newCategories);
+                saveData(recipes, newCategories);
+                setDraggedItemIndex(null);
+            };
 
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('main')}>
-            <Utensils className="text-orange-500 w-6 h-6" />
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">레시피 노트</h1>
-          </div>
-          <div className="flex items-center gap-2 flex-1 justify-end">
-            <button onClick={handleOpenAdd} className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg"><Plus className="w-5 h-5" /></button>
-            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"><Settings className="w-5 h-5" /></button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        {view === 'main' ? (
-          <>
-            <div className="flex gap-3 mb-6 items-center">
-              <div className="relative flex-[7]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input type="text" placeholder="제목이나 재료 검색..." className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-200 outline-none text-sm shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </div>
-              <button onClick={() => setView('ai')} className="flex-[1] flex items-center justify-center gap-2 bg-slate-900 text-white px-2 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap min-w-[80px] shadow-md active:scale-95 transition-all">
-                <Sparkles className="w-3.5 h-3.5 text-orange-400" /> AI 추천
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2 mb-6">
-              <button onClick={() => setActiveCategory("전체")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === "전체" ? "bg-slate-800 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200"}`}>전체</button>
-              {categories.map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === cat ? "bg-orange-500 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200"}`}>{cat}</button>)}
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredRecipes.map(recipe => (
-                <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-orange-300 hover:shadow-md cursor-pointer group relative transition-all">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded truncate max-w-[80%]">{recipe.category}</span>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => handleOpenEdit(recipe, e)} className="p-1 text-slate-400 hover:text-blue-500"><Edit2 className="w-3.5 h-3.5" /></button>
-                      <button onClick={(e) => deleteRecipe(recipe.id, e)} className="p-1 text-slate-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </div>
-                  <h3 className="font-bold text-slate-900 mb-2 truncate text-sm">{recipe.title}</h3>
-                  <div className="flex items-center gap-3 text-slate-400 text-[11px] font-medium"><span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {recipe.time}</span><span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {recipe.steps.length}단계</span></div>
+            if (isLoading) return (
+                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+                    <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mb-4"></div>
+                    <div className="text-slate-500 font-bold animate-pulse">서버 연결 중...</div>
                 </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="max-w-3xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center gap-4 mb-2">
-              <button onClick={() => setView('main')} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><ArrowLeft className="w-5 h-5 text-slate-600" /></button>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">AI 레시피 제안</h2>
-            </div>
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-              <p className="text-sm font-medium text-slate-500 mb-4">현재 가지고 계신 재료를 입력해 주세요.</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <textarea className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none resize-none h-24 focus:border-orange-400 transition-all" placeholder="예: 돼지고기, 김치, 두부, 대파" value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), askAiRecipe())} />
-                <button onClick={askAiRecipe} disabled={isAiLoading || !aiInput.trim()} className="bg-orange-500 text-white sm:w-24 rounded-2xl hover:bg-orange-600 disabled:bg-slate-200 flex flex-col items-center justify-center p-4 shadow-lg group active:scale-95">
-                  {isAiLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
-                  <span className="text-xs font-bold mt-1">분석 요청</span>
-                </button>
-              </div>
-            </div>
-            {isAiLoading && <div className="py-16 text-center text-orange-500 font-bold animate-pulse">AI 전문가가 레시피를 구상 중입니다...</div>}
-            {errorMsg && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm border border-red-100">{errorMsg}</div>}
-            {aiResultHtml && !isAiLoading && (
-              <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-xl relative overflow-hidden animate-in fade-in">
-                <div 
-                  className="relative z-10 text-slate-700 text-sm leading-relaxed" 
-                  dangerouslySetInnerHTML={{ __html: aiResultHtml }} 
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+            );
 
-      {/* Selected Recipe Modal */}
-      {selectedRecipe && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden max-h-[85vh] flex flex-col">
-            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
-              <span className="text-xs font-bold text-orange-600">{selectedRecipe.category}</span>
-              <div className="flex gap-2">
-                <button onClick={(e) => handleOpenEdit(selectedRecipe, e)} className="p-1.5 hover:bg-slate-200 rounded-md"><Edit2 className="w-4 h-4 text-slate-500" /></button>
-                <button onClick={() => setSelectedRecipe(null)} className="p-1.5 hover:bg-slate-200 rounded-md"><X className="w-4 h-4 text-slate-500" /></button>
-              </div>
-            </div>
-            <div className="p-6 overflow-y-auto">
-              <h2 className="text-2xl font-bold mb-1 text-slate-900">{selectedRecipe.title}</h2>
-              <p className="text-slate-400 text-sm mb-6 flex items-center gap-1 font-medium"><Clock className="w-3.5 h-3.5" /> 소요 시간: {selectedRecipe.time}</p>
-              <div className="mb-6"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800 uppercase tracking-tighter">준비 재료</h4><div className="flex flex-wrap gap-2">{selectedRecipe.ingredients.map((ing, idx) => <span key={idx} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">{ing}</span>)}</div></div>
-              <div><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800 uppercase tracking-tighter">조리 순서</h4><div className="space-y-4">{selectedRecipe.steps.map((step, idx) => (<div key={idx} className="flex gap-3"><span className="text-orange-500 font-bold text-xs mt-0.5">{idx + 1}.</span><p className="text-sm text-slate-600 leading-relaxed font-medium">{step}</p></div>))}</div></div>
-            </div>
-          </div>
-        </div>
-      )}
+            return (
+                <div className="min-h-screen bg-slate-50">
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+                        <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('main')}>
+                                <i data-lucide="utensils" className="text-orange-500 w-6 h-6"></i>
+                                <h1 className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">레시피 노트</h1>
+                            </div>
+                            <div className="flex items-center gap-2 flex-1 justify-end">
+                                <button onClick={handleOpenAdd} className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">
+                                    <i data-lucide="plus" className="w-5 h-5"></i>
+                                </button>
+                                <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+                                    <i data-lucide="settings" className="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </header>
 
-      {/* Form Modal */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95">
-            <h2 className="text-xl font-bold mb-4 text-slate-900">{editingId ? "레시피 수정" : "새 레시피 추가"}</h2>
-            <form onSubmit={handleSubmit} className="space-y-4 text-sm font-medium">
-              <input required className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500 transition-all shadow-inner" placeholder="요리 이름" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-              <div className="grid grid-cols-2 gap-3">
-                <select className="w-full px-3 py-2 border rounded-lg outline-none bg-slate-50" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>{categories.map(cat => <option key={cat}>{cat}</option>)}</select>
-                <input className="w-full px-3 py-2 border rounded-lg outline-none shadow-inner" placeholder="예: 30분" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
-              </div>
-              <textarea rows="3" className="w-full px-3 py-2 border rounded-lg outline-none resize-none shadow-inner" placeholder="재료 (한 줄에 하나씩)" value={formData.ingredients} onChange={e => setFormData({...formData, ingredients: e.target.value})} />
-              <textarea rows="4" className="w-full px-3 py-2 border rounded-lg outline-none resize-none shadow-inner" placeholder="순서 (한 줄에 하나씩)" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} />
-              <div className="flex gap-2 pt-2"><button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 py-2 text-slate-500 hover:bg-slate-50 rounded-lg">취소</button><button type="submit" className="flex-2 bg-orange-500 text-white px-8 py-2 rounded-lg font-bold shadow-lg hover:bg-orange-600 transition-all">저장하기</button></div>
-            </form>
-          </div>
-        </div>
-      )}
+                    <main className="max-w-5xl mx-auto px-4 py-6">
+                        {view === 'main' ? (
+                            <>
+                                <div className="flex gap-3 mb-6 items-center">
+                                    <div className="relative flex-[7]">
+                                        <i data-lucide="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
+                                        <input type="text" placeholder="제목이나 재료 검색..." className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-200 outline-none text-sm shadow-sm focus:ring-2 focus:ring-orange-200" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                    </div>
+                                    <button onClick={() => setView('ai')} className="flex-[1] flex items-center justify-center gap-2 bg-slate-900 text-white px-2 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap min-w-[80px] shadow-md active:scale-95 transition-all">
+                                        <i data-lucide="sparkles" className="w-3.5 h-3.5 text-orange-400"></i> AI 추천
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2 mb-6">
+                                    <button onClick={() => setActiveCategory("전체")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === "전체" ? "bg-slate-800 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200"}`}>전체</button>
+                                    {categories.map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === cat ? "bg-orange-500 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200"}`}>{cat}</button>)}
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                    {filteredRecipes.map(recipe => (
+                                        <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-orange-300 hover:shadow-md cursor-pointer group relative transition-all">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded truncate max-w-[80%]">{recipe.category}</span>
+                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => handleOpenEdit(recipe, e)} className="p-1 text-slate-400 hover:text-blue-500"><i data-lucide="edit-2" className="w-3.5 h-3.5"></i></button>
+                                                    <button onClick={(e) => deleteRecipe(recipe.id, e)} className="p-1 text-slate-400 hover:text-red-500"><i data-lucide="trash-2" className="w-3.5 h-3.5"></i></button>
+                                                </div>
+                                            </div>
+                                            <h3 className="font-bold text-slate-900 mb-2 truncate text-sm">{recipe.title}</h3>
+                                            <div className="flex items-center gap-3 text-slate-400 text-[11px] font-medium">
+                                                <span className="flex items-center gap-1"><i data-lucide="clock" className="w-3 h-3"></i> {recipe.time}</span>
+                                                <span className="flex items-center gap-1"><i data-lucide="book-open" className="w-3 h-3"></i> {recipe.steps.length}단계</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="max-w-3xl mx-auto space-y-6">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <button onClick={() => setView('main')} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><i data-lucide="arrow-left" className="w-5 h-5 text-slate-600"></i></button>
+                                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">AI 레시피 제안</h2>
+                                </div>
+                                <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                                    <p className="text-sm font-medium text-slate-500 mb-4">냉장고 속 재료를 입력하면 맞춤 레시피를 제안합니다.</p>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <textarea className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none resize-none h-24 focus:border-orange-400 transition-all" placeholder="예: 돼지고기, 김치, 두부, 대파" value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), askAiRecipe())} />
+                                        <button onClick={askAiRecipe} disabled={isAiLoading || !aiInput.trim()} className="bg-orange-500 text-white sm:w-24 rounded-2xl hover:bg-orange-600 disabled:bg-slate-200 flex flex-col items-center justify-center p-4 shadow-lg group active:scale-95">
+                                            {isAiLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <i data-lucide="send" className="w-6 h-6"></i>}
+                                            <span className="text-xs font-bold mt-1">분석 요청</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {isAiLoading && <div className="py-16 text-center text-orange-500 font-bold animate-pulse">AI 전문가가 레시피를 구상 중입니다...</div>}
+                                {errorMsg && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm border border-red-100">{errorMsg}</div>}
+                                {aiResultHtml && !isAiLoading && (
+                                    <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-xl relative overflow-hidden">
+                                        <div className="relative z-10 text-slate-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: aiResultHtml }} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
 
-      {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-800">카테고리 관리</h2><button onClick={() => setIsSettingsOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
-            <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
-              {categories.map((cat, index) => (
-                <div key={cat} draggable="true" onDragStart={() => onDragStart(index)} onDragOver={onDragOver} onDrop={() => onDrop(index)} className={`flex justify-between items-center p-2 bg-slate-50 rounded-lg text-sm border-2 transition-all ${draggedItemIndex === index ? "opacity-50 border-orange-300 border-dashed scale-95" : "border-transparent"}`}>
-                  <div className="flex items-center gap-3"><GripVertical className="w-4 h-4 text-slate-300 cursor-grab" /><span className="font-medium text-slate-700">{cat}</span></div>
-                  <button onClick={() => deleteCategory(cat)} className="p-1 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    {/* Selected Recipe Modal */}
+                    {selectedRecipe && (
+                        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden max-h-[85vh] flex flex-col">
+                                <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+                                    <span className="text-xs font-bold text-orange-600">{selectedRecipe.category}</span>
+                                    <div className="flex gap-2">
+                                        <button onClick={(e) => handleOpenEdit(selectedRecipe, e)} className="p-1.5 hover:bg-slate-200 rounded-md"><i data-lucide="edit-2" className="w-4 h-4 text-slate-500"></i></button>
+                                        <button onClick={() => setSelectedRecipe(null)} className="p-1.5 hover:bg-slate-200 rounded-md"><i data-lucide="x" className="w-4 h-4 text-slate-500"></i></button>
+                                    </div>
+                                </div>
+                                <div className="p-6 overflow-y-auto">
+                                    <h2 className="text-2xl font-bold mb-1 text-slate-900">{selectedRecipe.title}</h2>
+                                    <p className="text-slate-400 text-sm mb-6 flex items-center gap-1 font-medium"><i data-lucide="clock" className="w-3.5 h-3.5"></i> 소요 시간: {selectedRecipe.time}</p>
+                                    <div className="mb-6"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800 uppercase">준비 재료</h4><div className="flex flex-wrap gap-2">{selectedRecipe.ingredients.map((ing, idx) => <span key={idx} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">{ing}</span>)}</div></div>
+                                    <div><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800 uppercase">조리 순서</h4><div className="space-y-4">{selectedRecipe.steps.map((step, idx) => (<div key={idx} className="flex gap-3"><span className="text-orange-500 font-bold text-xs mt-0.5">{idx + 1}.</span><p className="text-sm text-slate-600 leading-relaxed font-medium">{step}</p></div>))}</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Form Modal */}
+                    {isFormOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+                            <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95">
+                                <h2 className="text-xl font-bold mb-4 text-slate-900">{editingId ? "레시피 수정" : "새 레시피 추가"}</h2>
+                                <form onSubmit={handleSubmit} className="space-y-4 text-sm font-medium">
+                                    <input required className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500 transition-all shadow-inner" placeholder="요리 이름" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <select 
+                                            className="w-full px-3 py-2 border rounded-lg outline-none bg-slate-50 cursor-pointer" 
+                                            value={formData.category} 
+                                            onChange={e => setFormData({...formData, category: e.target.value})}
+                                        >
+                                            {categories.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                        <input className="w-full px-3 py-2 border rounded-lg outline-none shadow-inner" placeholder="예: 30분" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
+                                    </div>
+                                    <textarea rows="3" className="w-full px-3 py-2 border rounded-lg outline-none resize-none shadow-inner" placeholder="재료 (한 줄에 하나씩)" value={formData.ingredients} onChange={e => setFormData({...formData, ingredients: e.target.value})} />
+                                    <textarea rows="4" className="w-full px-3 py-2 border rounded-lg outline-none resize-none shadow-inner" placeholder="순서 (한 줄에 하나씩)" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} />
+                                    <div className="flex gap-2 pt-2"><button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 py-2 text-slate-500 hover:bg-slate-50 rounded-lg">취소</button><button type="submit" className="flex-2 bg-orange-500 text-white px-8 py-2 rounded-lg font-bold shadow-lg hover:bg-orange-600 transition-all">저장하기</button></div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Settings Modal */}
+                    {isSettingsOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+                            <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+                                <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-800">카테고리 관리</h2><button onClick={() => setIsSettingsOpen(false)}><i data-lucide="x" className="w-5 h-5 text-slate-400"></i></button></div>
+                                <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
+                                    {categories.map((cat, index) => (
+                                        <div key={cat} draggable="true" onDragStart={() => onDragStart(index)} onDragOver={onDragOver} onDrop={() => onDrop(index)} className={`flex justify-between items-center p-2 bg-slate-50 rounded-lg text-sm border-2 transition-all ${draggedItemIndex === index ? "drag-over scale-95" : "border-transparent"}`}>
+                                            <div className="flex items-center gap-3"><i data-lucide="grip-vertical" className="w-4 h-4 text-slate-300 cursor-grab"></i><span className="font-medium text-slate-700">{cat}</span></div>
+                                            <button onClick={() => deleteCategory(cat)} className="p-1 text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="trash-2" className="w-4 h-4"></i></button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-1 border-t pt-4"><input type="text" className="flex-1 px-3 py-1.5 border rounded-lg text-sm outline-none focus:border-orange-500" placeholder="새 카테고리" value={newCatName} onChange={e => setNewCatName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addCategory()} /><button onClick={addCategory} className="p-1.5 bg-orange-500 rounded-lg text-white shadow-md"><i data-lucide="check" className="w-5 h-5"></i></button></div>
+                            </div>
+                        </div>
+                    )}
                 </div>
-              ))}
-            </div>
-            <div className="flex gap-1 border-t pt-4"><input type="text" className="flex-1 px-3 py-1.5 border rounded-lg text-sm outline-none focus:border-orange-500" placeholder="새 카테고리" value={newCatName} onChange={e => setNewCatName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addCategory()} /><button onClick={addCategory} className="p-1.5 bg-orange-500 rounded-lg text-white shadow-md active:scale-95 transition-all"><Check className="w-5 h-5" /></button></div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+            );
+        };
 
-export default App;
+        // Lucide 아이콘 업데이트 훅
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+        // 아이콘 렌더링 후 초기화
+        setInterval(() => {
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }, 500);
+    </script>
+</body>
+</html>
