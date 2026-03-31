@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Utensils, Clock, BookOpen, X, Trash2, Edit2, Settings, Check, GripVertical, Sparkles, ArrowLeft, Send, Loader2, Save } from 'lucide-react';
+import { Plus, Search, Utensils, Clock, BookOpen, X, Trash2, Edit2, Settings, Check, GripVertical, Sparkles, ArrowLeft, Send, Loader2 } from 'lucide-react';
 
-// 구글 앱스 스크립트 배포 후 받은 웹 앱 URL을 여기에 입력하세요.
-const SCRIPT_URL = ""; 
+// 제공해주신 구글 앱스 스크립트 웹 앱 URL
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjIxQcDAcLHuH9auRs4bLN--l9KJ5PvFx6uVuYwguyll8fbKW7G5HUSsQvG8rYWAsA0A/exec"; 
 
 const initialCategories = ["찌개&국", "기타 한식", "면", "소스", "디저트"];
 
 const App = () => {
-  const [view, setView] = useState('main'); // 'main' or 'ai'
+  const [view, setView] = useState('main'); 
   const [recipes, setRecipes] = useState([]);
   const [categories, setCategories] = useState(initialCategories);
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,42 +18,29 @@ const App = () => {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // AI 추천 관련 상태
+  // AI 관련 상태
   const [aiInput, setAiInput] = useState("");
   const [aiResultHtml, setAiResultHtml] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-
-  // 드래그 앤 드롭 상태
   const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
   const [formData, setFormData] = useState({
-    title: "",
-    category: "",
-    time: "",
-    ingredients: "",
-    steps: ""
+    title: "", category: "", time: "", ingredients: "", steps: ""
   });
 
   const [newCatName, setNewCatName] = useState("");
 
-  // 서버에서 데이터 불러오기
+  // 초기 데이터 로드
   useEffect(() => {
     const fetchData = async () => {
-      if (!SCRIPT_URL) {
-        setRecipes([]);
-        setCategories(initialCategories);
-        setIsLoading(false);
-        return;
-      }
-
       try {
         const response = await fetch(SCRIPT_URL);
         const data = await response.json();
         if (data.recipes) setRecipes(data.recipes);
         if (data.categories) setCategories(data.categories);
       } catch (err) {
-        console.error("데이터 로드 실패:", err);
+        console.error("Data load failed:", err);
       } finally {
         setIsLoading(false);
       }
@@ -61,13 +48,12 @@ const App = () => {
     fetchData();
   }, []);
 
-  // 데이터 변경 시 서버에 저장하는 함수
+  // 서버 저장 함수
   const saveData = async (updatedRecipes, updatedCategories) => {
-    if (!SCRIPT_URL) return;
     try {
       await fetch(SCRIPT_URL, {
         method: "POST",
-        mode: "no-cors", // GAS POST 특성상 no-cors 사용
+        mode: "no-cors", // GAS POST 보안 정책 대응
         body: JSON.stringify({
           type: "save",
           recipes: updatedRecipes || recipes,
@@ -75,19 +61,11 @@ const App = () => {
         })
       });
     } catch (err) {
-      console.error("저장 실패:", err);
+      console.error("Save failed:", err);
     }
   };
 
-  const filteredRecipes = recipes.filter(recipe => {
-    const matchesCategory = activeCategory === "전체" || recipe.category === activeCategory;
-    const matchesSearch = 
-      recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.ingredients.some(ing => ing.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
-
-  // 제공된 코드의 결과 처리 로직 (Markdown -> HTML 변환)
+  // AI 응답 포맷팅 (제공된 로직 적용)
   const formatAiResponse = (text) => {
     if (!text) return "";
     return text
@@ -97,29 +75,20 @@ const App = () => {
       .replace(/\n/g, '<br>');
   };
 
-  // AI 레시피 추천 로직 (GAS analyze 엔드포인트 활용)
+  // AI 추천 요청
   const askAiRecipe = async () => {
     if (!aiInput.trim()) return;
-    if (!SCRIPT_URL) {
-      setErrorMsg("서버 URL이 설정되지 않았습니다.");
-      return;
-    }
-    
     setIsAiLoading(true);
     setAiResultHtml("");
     setErrorMsg("");
     
-    const systemPrompt = "너는 요리 전문가야. 사용자가 입력한 재료를 분석해서 가장 적절한 레시피를 추천해줘. '### 레시피이름' 형식의 제목과 소요시간, 재료, 단계를 포함해야 해.";
-    const userPrompt = `사용자 재료: ${aiInput}. 이 재료들로 만들 수 있는 요리를 하나 추천해줘.`;
-
     const fetchWithRetry = async (retries = 0) => {
       try {
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           body: JSON.stringify({
             type: "analyze",
-            prompt: userPrompt,
-            systemPrompt: systemPrompt
+            prompt: aiInput
           })
         });
 
@@ -130,15 +99,14 @@ const App = () => {
         if (text) {
           setAiResultHtml(formatAiResponse(text));
         } else {
-          throw new Error("응답이 비어있습니다.");
+          throw new Error("AI 응답 데이터가 없습니다.");
         }
       } catch (err) {
-        if (retries < 5) {
-          const delay = Math.pow(2, retries) * 1000;
-          await new Promise(res => setTimeout(res, delay));
+        if (retries < 3) {
+          await new Promise(res => setTimeout(res, 2000));
           return fetchWithRetry(retries + 1);
         }
-        setErrorMsg(`추천 실패: ${err.message}`);
+        setErrorMsg(`AI 요청 실패: ${err.message}`);
       } finally {
         setIsAiLoading(false);
       }
@@ -146,6 +114,14 @@ const App = () => {
 
     await fetchWithRetry();
   };
+
+  const filteredRecipes = recipes.filter(recipe => {
+    const matchesCategory = activeCategory === "전체" || recipe.category === activeCategory;
+    const matchesSearch = 
+      recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      recipe.ingredients.some(ing => ing.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -171,14 +147,7 @@ const App = () => {
       ingredients: formData.ingredients.split('\n').filter(i => i.trim()),
       steps: formData.steps.split('\n').filter(s => s.trim())
     };
-
-    let updatedRecipes;
-    if (editingId) {
-      updatedRecipes = recipes.map(r => r.id === editingId ? recipeData : r);
-    } else {
-      updatedRecipes = [...recipes, recipeData];
-    }
-    
+    const updatedRecipes = editingId ? recipes.map(r => r.id === editingId ? recipeData : r) : [...recipes, recipeData];
     setRecipes(updatedRecipes);
     saveData(updatedRecipes, categories);
     setIsFormOpen(false);
@@ -221,18 +190,10 @@ const App = () => {
     setDraggedItemIndex(null);
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
-        <p className="text-slate-500 font-medium">레시피 노트를 불러오는 중...</p>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-slate-500 font-bold bg-slate-50">서버 연결 중...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('main')}>
@@ -240,12 +201,8 @@ const App = () => {
             <h1 className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">레시피 노트</h1>
           </div>
           <div className="flex items-center gap-2 flex-1 justify-end">
-            <button onClick={handleOpenAdd} title="레시피 추가" className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors border border-transparent hover:border-orange-100">
-              <Plus className="w-5 h-5" />
-            </button>
-            <button onClick={() => setIsSettingsOpen(true)} title="카테고리 관리" className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors border border-transparent hover:border-slate-200">
-              <Settings className="w-5 h-5" />
-            </button>
+            <button onClick={handleOpenAdd} className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg"><Plus className="w-5 h-5" /></button>
+            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"><Settings className="w-5 h-5" /></button>
           </div>
         </div>
       </header>
@@ -253,50 +210,22 @@ const App = () => {
       <main className="max-w-5xl mx-auto px-4 py-6">
         {view === 'main' ? (
           <>
-            {/* Search & AI Button Row - Ratio 7:1 */}
             <div className="flex gap-3 mb-6 items-center">
               <div className="relative flex-[7]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input 
-                  type="text"
-                  placeholder="요리 이름이나 재료 검색..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-200 outline-none transition-all text-sm shadow-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <input type="text" placeholder="제목이나 재료 검색..." className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-200 outline-none text-sm shadow-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              <button 
-                onClick={() => setView('ai')}
-                className="flex-[1] flex items-center justify-center gap-2 bg-slate-900 text-white px-2 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-slate-800 transition-all active:scale-95 whitespace-nowrap min-w-[80px]"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                AI 추천
+              <button onClick={() => setView('ai')} className="flex-[1] flex items-center justify-center gap-2 bg-slate-900 text-white px-2 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap min-w-[80px] shadow-md active:scale-95 transition-all">
+                <Sparkles className="w-3.5 h-3.5 text-orange-400" /> AI 추천
               </button>
             </div>
-
-            {/* Category Chips */}
             <div className="flex flex-wrap gap-2 mb-6">
-              <button
-                onClick={() => setActiveCategory("전체")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === "전체" ? "bg-slate-800 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"}`}
-              >
-                전체
-              </button>
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === cat ? "bg-orange-500 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200 hover:border-slate-300"}`}
-                >
-                  {cat}
-                </button>
-              ))}
+              <button onClick={() => setActiveCategory("전체")} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === "전체" ? "bg-slate-800 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200"}`}>전체</button>
+              {categories.map(cat => <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${activeCategory === cat ? "bg-orange-500 text-white shadow-md" : "bg-white text-slate-500 border border-slate-200"}`}>{cat}</button>)}
             </div>
-
-            {/* Recipe Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {filteredRecipes.map(recipe => (
-                <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-orange-300 hover:shadow-md transition-all cursor-pointer group relative">
+                <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-orange-300 hover:shadow-md cursor-pointer group relative transition-all">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded truncate max-w-[80%]">{recipe.category}</span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -305,72 +234,33 @@ const App = () => {
                     </div>
                   </div>
                   <h3 className="font-bold text-slate-900 mb-2 truncate text-sm">{recipe.title}</h3>
-                  <div className="flex items-center gap-3 text-slate-400 text-[11px]">
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {recipe.time}</span>
-                    <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {recipe.steps.length}단계</span>
-                  </div>
+                  <div className="flex items-center gap-3 text-slate-400 text-[11px] font-medium"><span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {recipe.time}</span><span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {recipe.steps.length}단계</span></div>
                 </div>
               ))}
             </div>
-            {filteredRecipes.length === 0 && (
-              <div className="text-center py-20 text-slate-400 text-sm italic">
-                {recipes.length === 0 ? "등록된 레시피가 없습니다. 첫 레시피를 추가해보세요!" : "검색 결과가 없습니다."}
-              </div>
-            )}
           </>
         ) : (
-          <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="max-w-3xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-4 mb-2">
-              <button onClick={() => setView('main')} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                <ArrowLeft className="w-5 h-5 text-slate-600" />
-              </button>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">AI 요리 추천사</h2>
+              <button onClick={() => setView('main')} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><ArrowLeft className="w-5 h-5 text-slate-600" /></button>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">AI 레시피 제안</h2>
             </div>
-            
             <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-              <p className="text-sm font-medium text-slate-500 mb-4">냉장고에 남은 재료를 입력하면 가장 적절한 요리를 추천해드립니다.</p>
+              <p className="text-sm font-medium text-slate-500 mb-4">현재 가지고 계신 재료를 입력해 주세요.</p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <textarea 
-                  className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:border-orange-400 outline-none shadow-inner resize-none h-24 transition-all"
-                  placeholder="예: 돼지고기, 김치, 두부, 대파"
-                  value={aiInput}
-                  onChange={(e) => setAiInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), askAiRecipe())}
-                />
-                <button 
-                  onClick={askAiRecipe}
-                  disabled={isAiLoading || !aiInput.trim()}
-                  className="bg-orange-500 text-white sm:w-24 rounded-2xl hover:bg-orange-600 disabled:bg-slate-200 transition-all flex flex-col items-center justify-center gap-1 p-4 shadow-lg group active:scale-95"
-                >
-                  {isAiLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />}
-                  <span className="text-xs font-bold">추천 요청</span>
+                <textarea className="flex-grow bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none resize-none h-24 focus:border-orange-400 transition-all" placeholder="예: 돼지고기, 김치, 두부, 대파" value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), askAiRecipe())} />
+                <button onClick={askAiRecipe} disabled={isAiLoading || !aiInput.trim()} className="bg-orange-500 text-white sm:w-24 rounded-2xl hover:bg-orange-600 disabled:bg-slate-200 flex flex-col items-center justify-center p-4 shadow-lg group active:scale-95">
+                  {isAiLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
+                  <span className="text-xs font-bold mt-1">분석 요청</span>
                 </button>
               </div>
             </div>
-
-            {isAiLoading && (
-              <div className="py-16 text-center space-y-4">
-                <div className="inline-block relative">
-                   <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
-                   <Sparkles className="w-6 h-6 text-orange-400 absolute -top-1 -right-1 animate-pulse" />
-                </div>
-                <p className="text-slate-600 font-bold animate-pulse text-sm">재료를 분석하여 레시피를 구상 중입니다...</p>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-medium animate-in slide-in-from-top-2">
-                {errorMsg}
-              </div>
-            )}
-
+            {isAiLoading && <div className="py-16 text-center text-orange-500 font-bold animate-pulse">AI 전문가가 레시피를 구상 중입니다...</div>}
+            {errorMsg && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm border border-red-100">{errorMsg}</div>}
             {aiResultHtml && !isAiLoading && (
-              <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-xl relative overflow-hidden animate-in fade-in duration-500">
-                <div className="absolute top-0 right-0 p-6 opacity-5 rotate-12">
-                  <Utensils className="w-32 h-32 text-slate-900" />
-                </div>
+              <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-xl relative overflow-hidden animate-in fade-in">
                 <div 
-                  className="relative z-10 text-slate-700 text-sm leading-relaxed"
+                  className="relative z-10 text-slate-700 text-sm leading-relaxed" 
                   dangerouslySetInnerHTML={{ __html: aiResultHtml }} 
                 />
               </div>
@@ -386,81 +276,53 @@ const App = () => {
             <div className="p-4 border-b flex justify-between items-center bg-slate-50">
               <span className="text-xs font-bold text-orange-600">{selectedRecipe.category}</span>
               <div className="flex gap-2">
-                <button onClick={(e) => handleOpenEdit(selectedRecipe, e)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-md"><Edit2 className="w-4 h-4" /></button>
-                <button onClick={() => setSelectedRecipe(null)} className="p-1.5 text-slate-500 hover:bg-slate-200 rounded-md"><X className="w-4 h-4" /></button>
+                <button onClick={(e) => handleOpenEdit(selectedRecipe, e)} className="p-1.5 hover:bg-slate-200 rounded-md"><Edit2 className="w-4 h-4 text-slate-500" /></button>
+                <button onClick={() => setSelectedRecipe(null)} className="p-1.5 hover:bg-slate-200 rounded-md"><X className="w-4 h-4 text-slate-500" /></button>
               </div>
             </div>
             <div className="p-6 overflow-y-auto">
-              <h2 className="text-2xl font-bold mb-1">{selectedRecipe.title}</h2>
-              <p className="text-slate-400 text-sm mb-6 flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {selectedRecipe.time}</p>
-              <div className="mb-6">
-                <h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800">준비 재료</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedRecipe.ingredients.map((ing, idx) => <span key={idx} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">{ing}</span>)}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800">조리 순서</h4>
-                <div className="space-y-4">
-                  {selectedRecipe.steps.map((step, idx) => (
-                    <div key={idx} className="flex gap-3">
-                      <span className="text-orange-500 font-bold text-xs mt-0.5">{idx + 1}.</span>
-                      <p className="text-sm text-slate-600 leading-relaxed">{step}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <h2 className="text-2xl font-bold mb-1 text-slate-900">{selectedRecipe.title}</h2>
+              <p className="text-slate-400 text-sm mb-6 flex items-center gap-1 font-medium"><Clock className="w-3.5 h-3.5" /> 소요 시간: {selectedRecipe.time}</p>
+              <div className="mb-6"><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800 uppercase tracking-tighter">준비 재료</h4><div className="flex flex-wrap gap-2">{selectedRecipe.ingredients.map((ing, idx) => <span key={idx} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">{ing}</span>)}</div></div>
+              <div><h4 className="font-bold text-sm mb-3 border-l-4 border-orange-500 pl-2 text-slate-800 uppercase tracking-tighter">조리 순서</h4><div className="space-y-4">{selectedRecipe.steps.map((step, idx) => (<div key={idx} className="flex gap-3"><span className="text-orange-500 font-bold text-xs mt-0.5">{idx + 1}.</span><p className="text-sm text-slate-600 leading-relaxed font-medium">{step}</p></div>))}</div></div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add/Edit Form Modal */}
+      {/* Form Modal */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-xl font-bold mb-4">{editingId ? "레시피 수정" : "새 레시피 추가"}</h2>
-            <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-              <input required className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500" placeholder="요리 이름" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in-95">
+            <h2 className="text-xl font-bold mb-4 text-slate-900">{editingId ? "레시피 수정" : "새 레시피 추가"}</h2>
+            <form onSubmit={handleSubmit} className="space-y-4 text-sm font-medium">
+              <input required className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500 transition-all shadow-inner" placeholder="요리 이름" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
               <div className="grid grid-cols-2 gap-3">
-                <select className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                  {categories.map(cat => <option key={cat}>{cat}</option>)}
-                </select>
-                <input className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500" placeholder="소요 시간" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
+                <select className="w-full px-3 py-2 border rounded-lg outline-none bg-slate-50" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>{categories.map(cat => <option key={cat}>{cat}</option>)}</select>
+                <input className="w-full px-3 py-2 border rounded-lg outline-none shadow-inner" placeholder="예: 30분" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
               </div>
-              <textarea rows="3" className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500 resize-none" placeholder="재료 (줄바꿈 구분)" value={formData.ingredients} onChange={e => setFormData({...formData, ingredients: e.target.value})} />
-              <textarea rows="4" className="w-full px-3 py-2 border rounded-lg outline-none focus:border-orange-500 resize-none" placeholder="순서 (줄바꿈 구분)" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} />
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 py-2 text-slate-500 font-medium hover:bg-slate-50 rounded-lg transition-colors">취소</button>
-                <button type="submit" className="flex-2 bg-orange-500 text-white px-8 py-2 rounded-lg font-bold hover:bg-orange-600 transition-shadow shadow-md">저장</button>
-              </div>
+              <textarea rows="3" className="w-full px-3 py-2 border rounded-lg outline-none resize-none shadow-inner" placeholder="재료 (한 줄에 하나씩)" value={formData.ingredients} onChange={e => setFormData({...formData, ingredients: e.target.value})} />
+              <textarea rows="4" className="w-full px-3 py-2 border rounded-lg outline-none resize-none shadow-inner" placeholder="순서 (한 줄에 하나씩)" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} />
+              <div className="flex gap-2 pt-2"><button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 py-2 text-slate-500 hover:bg-slate-50 rounded-lg">취소</button><button type="submit" className="flex-2 bg-orange-500 text-white px-8 py-2 rounded-lg font-bold shadow-lg hover:bg-orange-600 transition-all">저장하기</button></div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Settings Modal - Drag & Drop */}
+      {/* Settings Modal */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
           <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-800">카테고리 관리</h2><button onClick={() => setIsSettingsOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
-            <p className="text-[11px] text-slate-400 mb-3 italic">핸들을 잡고 드래그하여 순서를 변경할 수 있습니다.</p>
             <div className="space-y-2 mb-4 max-h-64 overflow-y-auto pr-1">
               {categories.map((cat, index) => (
-                <div key={cat} draggable="true" onDragStart={() => onDragStart(index)} onDragOver={onDragOver} onDrop={() => onDrop(index)}
-                  className={`flex justify-between items-center p-2 bg-slate-50 rounded-lg text-sm border-2 transition-all ${draggedItemIndex === index ? "opacity-50 border-orange-300 border-dashed scale-95" : "border-transparent"}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 p-1 transition-colors"><GripVertical className="w-4 h-4" /></div>
-                    <span className="font-medium text-slate-700">{cat}</span>
-                  </div>
+                <div key={cat} draggable="true" onDragStart={() => onDragStart(index)} onDragOver={onDragOver} onDrop={() => onDrop(index)} className={`flex justify-between items-center p-2 bg-slate-50 rounded-lg text-sm border-2 transition-all ${draggedItemIndex === index ? "opacity-50 border-orange-300 border-dashed scale-95" : "border-transparent"}`}>
+                  <div className="flex items-center gap-3"><GripVertical className="w-4 h-4 text-slate-300 cursor-grab" /><span className="font-medium text-slate-700">{cat}</span></div>
                   <button onClick={() => deleteCategory(cat)} className="p-1 text-slate-300 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
-            <div className="flex gap-1 border-t pt-4">
-              <input type="text" className="flex-1 px-3 py-1.5 border rounded-lg text-sm outline-none focus:border-orange-500" placeholder="새 카테고리 이름" value={newCatName} onChange={e => setNewCatName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addCategory()} />
-              <button onClick={addCategory} className="p-1.5 bg-orange-500 rounded-lg text-white hover:bg-orange-600 transition-colors shadow-sm"><Check className="w-5 h-5" /></button>
-            </div>
+            <div className="flex gap-1 border-t pt-4"><input type="text" className="flex-1 px-3 py-1.5 border rounded-lg text-sm outline-none focus:border-orange-500" placeholder="새 카테고리" value={newCatName} onChange={e => setNewCatName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addCategory()} /><button onClick={addCategory} className="p-1.5 bg-orange-500 rounded-lg text-white shadow-md active:scale-95 transition-all"><Check className="w-5 h-5" /></button></div>
           </div>
         </div>
       )}
