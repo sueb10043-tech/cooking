@@ -212,7 +212,10 @@
                                 <span 
                                     className={`px-1.5 py-0.5 rounded text-[10px] font-medium border shadow-sm transition-all cursor-pointer hover:brightness-95 ${colorClass}`}
                                     onClick={(e) => {
-                                        if (key === 'shoppingMemo') setMoveTarget(item.trim());
+                                        if (key === 'shoppingMemo') {
+                                            e.stopPropagation();
+                                            setMoveTarget(item.trim());
+                                        }
                                     }}
                                 >
                                     {item.trim()}
@@ -296,7 +299,6 @@
                                 <h1 className="text-xl font-black text-slate-900 tracking-tight">레시피 노트</h1>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* PC 전용: 설정 버튼 왼쪽 추천 버튼 */}
                                 <button onClick={() => setView('ai')} className="hidden lg:flex p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-all active:scale-90 items-center gap-1 text-xs font-bold"><Icon name="sparkles" className="w-4 h-4" /> 추천</button>
                                 <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-all active:scale-90"><Icon name="settings" /></button>
                             </div>
@@ -307,7 +309,6 @@
                         <div className={`flex-grow order-1 lg:order-1 ${mobileTab !== 'recipes' ? 'hidden lg:block' : ''}`}>
                             {view === 'main' ? (
                                 <>
-                                    {/* 검색 영역: [검색창] + [+] 배치 (추천 버튼 삭제) */}
                                     <div className="flex gap-2 mb-6 items-center w-full">
                                         <div className="relative flex-grow h-[42px]">
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center"><Icon name="search" className="text-slate-400 w-4 h-4" /></div>
@@ -321,7 +322,6 @@
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-3">
                                         {filteredRecipes.map(r => (
-                                            /* 모바일 즉시 열기: lg(PC)에서만 group-hover가 작동하도록 수정 */
                                             <div key={r.id} onClick={() => setSelectedRecipe(r)} className="bg-white rounded-xl border border-slate-200 pt-[6px] px-3 pb-2.5 hover:border-orange-300 hover:shadow-lg cursor-pointer group relative transition-all flex flex-col justify-start h-[95px]">
                                                 <div className="flex-grow">
                                                     <div className="flex justify-between items-center mb-[3.5px]" style={{ transform: 'translateY(-0.8px)' }}>
@@ -474,11 +474,14 @@
                         </aside>
                     </main>
 
-                    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 lg:hidden shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-                        <button onClick={() => {setMobileTab('recipes'); setView('main');}} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'recipes' && view === 'main' ? 'text-orange-500' : 'text-slate-400'}`}><Icon name="book-open" className="w-6 h-6" /><span className="text-[10px] font-bold">레시피</span></button>
-                        <button onClick={() => setMobileTab('fridge')} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'fridge' ? 'text-orange-500' : 'text-slate-400'}`}><Icon name="container" className="w-6 h-6" /><span className="text-[10px] font-bold">냉장고/장보기</span></button>
-                        <button onClick={() => {setMobileTab('recipes'); setView('ai');}} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${view === 'ai' ? 'text-orange-500' : 'text-slate-400'}`}><Icon name="sparkles" className="w-6 h-6" /><span className="text-[10px] font-bold">추천</span></button>
-                    </nav>
+                    {/* 모바일 내비게이션 독바: 상세 모달이 켜져 있을 때는 숨김 */}
+                    { !selectedRecipe && (
+                        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 lg:hidden shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                            <button onClick={() => {setMobileTab('recipes'); setView('main');}} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'recipes' && view === 'main' ? 'text-orange-500' : 'text-slate-400'}`}><Icon name="book-open" className="w-6 h-6" /><span className="text-[10px] font-bold">레시피</span></button>
+                            <button onClick={() => setMobileTab('fridge')} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'fridge' ? 'text-orange-500' : 'text-slate-400'}`}><Icon name="container" className="w-6 h-6" /><span className="text-[10px] font-bold">냉장고/장보기</span></button>
+                            <button onClick={() => {setMobileTab('recipes'); setView('ai');}} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${view === 'ai' ? 'text-orange-500' : 'text-slate-400'}`}><Icon name="sparkles" className="w-6 h-6" /><span className="text-[10px] font-bold">추천</span></button>
+                        </nav>
+                    )}
 
                     {selectedRecipe && (
                         <div className="fixed inset-0 z-40 flex items-center justify-center p-4 modal-overlay" onClick={() => setSelectedRecipe(null)}>
