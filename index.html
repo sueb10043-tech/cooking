@@ -25,10 +25,9 @@
             input, textarea, select {
                 font-size: 16px !important;
             }
-            /* 모달 내부 스크롤 허용 */
             .mobile-modal-scroll {
                 overflow-y: auto !important;
-                max-height: calc(85vh - 60px); /* 헤더 제외 높이 */
+                max-height: calc(85vh - 60px);
                 -webkit-overflow-scrolling: touch;
             }
         }
@@ -66,7 +65,6 @@
             const [editingId, setEditingId] = useState(null);
             const [isLoading, setIsLoading] = useState(true);
 
-            // 냉장고 & 장보기 상태
             const [fridgeData, setFridgeData] = useState({ refrigerated: "", frozen: "", roomTemp: "", sauce: "", shoppingMemo: "" });
             const [isFridgeSaving, setIsFridgeSaving] = useState(false);
             const [editingSection, setEditingSection] = useState(null);
@@ -74,7 +72,6 @@
             const [moveTarget, setMoveTarget] = useState(null);
             const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
-            // AI 추천 상태
             const [aiInput, setAiInput] = useState("");
             const [aiRecommendations, setAiRecommendations] = useState([]); 
             const [selectedAiRecipe, setSelectedAiRecipe] = useState(null); 
@@ -88,7 +85,9 @@
 
             const fetchData = async () => {
                 try {
-                    const response = await fetch(SCRIPT_URL);
+                    const response = await fetch(SCRIPT_URL, {
+                        credentials: 'omit'
+                    });
                     const data = await response.json();
                     if (data.recipes) setRecipes(data.recipes);
                     if (data.categories && data.categories.length > 0) setCategories(data.categories);
@@ -474,7 +473,6 @@
                         </aside>
                     </main>
 
-                    {/* 모바일 내비게이션 독바: 상세 모달이 켜져 있을 때는 숨김 */}
                     { !selectedRecipe && (
                         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50 lg:hidden shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                             <button onClick={() => {setMobileTab('recipes'); setView('main');}} className={`flex flex-col items-center gap-1 flex-1 py-2 transition-colors ${mobileTab === 'recipes' && view === 'main' ? 'text-orange-500' : 'text-slate-400'}`}><Icon name="book-open" className="w-6 h-6" /><span className="text-[10px] font-bold">레시피</span></button>
